@@ -13,7 +13,6 @@ import type {
   GuessResult,
   RoundEndPayload,
   GameOverPayload,
-  PlayerInfo,
 } from "./types";
 
 /* ── State shape ──────────────────────────────────── */
