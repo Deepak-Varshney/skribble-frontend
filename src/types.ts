@@ -34,6 +34,7 @@ export interface RoomSnapshot {
   round: number;
   turn: number;
   totalTurns: number;
+  expiresAt: number;
   maskedWord: string;
   strokes: StrokeData[];
 }

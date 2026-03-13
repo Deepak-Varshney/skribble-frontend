@@ -1,6 +1,7 @@
 import { useGame } from "../GameContext";
 import CreateRoomForm from "./landing/CreateRoomForm";
 import JoinRoomForm from "./landing/JoinRoomForm";
+import PublicRoomsPanel from "./landing/PublicRoomsPanel";
 
 export default function Landing() {
   const { createRoom, joinRoom, error } = useGame();
@@ -16,6 +17,8 @@ export default function Landing() {
         <CreateRoomForm onCreateRoom={createRoom} />
         <JoinRoomForm onJoinRoom={joinRoom} />
       </div>
+
+      <PublicRoomsPanel onJoinRoom={joinRoom} />
 
       {error && <p className="text-red-400 text-sm">{error}</p>}
     </div>

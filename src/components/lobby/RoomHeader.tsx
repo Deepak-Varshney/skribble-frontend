@@ -4,7 +4,7 @@ interface RoomHeaderProps {
 
 export default function RoomHeader({ roomId }: RoomHeaderProps) {
   const copyLink = () => {
-    navigator.clipboard.writeText(`${window.location.origin}?room=${roomId}`);
+    navigator.clipboard.writeText(`${window.location.origin}/room/${roomId}`);
   };
 
   return (
