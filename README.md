@@ -1,73 +1,110 @@
-# React + TypeScript + Vite
+# Skribble Frontend (Sketch Clash)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React + TypeScript frontend for a real-time multiplayer drawing and guessing game (skribbl.io clone).
 
-Currently, two official plugins are available:
+## Live Links
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- Frontend Live URL: Add your deployed frontend URL here
+- Backend Live URL: https://skribble-backend-8snk.onrender.com
+- Backend Repo: https://github.com/Deepak-Varshney/skribble-backend
 
-## React Compiler
+## Tech Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- React 19 + TypeScript
+- Vite
+- Tailwind CSS
+- Socket.IO Client
+- Fabric.js
 
-## Expanding the ESLint configuration
+## Core Features
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- Create room with settings (max players, rounds, draw time, word choices, hints, private/public)
+- Join room via room code and route link (`/room/:roomId`)
+- Lobby with players + ready state + host controls
+- Turn-based game rounds (one drawer, others guess)
+- Real-time drawing sync
+- Guessing + scoring + leaderboard + winner screen
+- Drawing tools: brush, colors, size, undo, clear
+- Hints over time and draw countdown
+- Public room discovery and private room invite flow
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## Local Setup
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+### 1. Install dependencies
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+cd frontend
+npm install
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### 2. Configure environment
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+Create `.env.local`:
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```env
+VITE_SERVER_URL=http://localhost:3001
 ```
+
+For production, set it to your deployed backend URL (without trailing slash):
+
+```env
+VITE_SERVER_URL=https://skribble-backend-8snk.onrender.com
+```
+
+### 3. Run
+
+```bash
+npm run dev
+```
+
+Open: `http://localhost:5173`
+
+### 4. Build
+
+```bash
+npm run build
+```
+
+## Frontend Architecture
+
+- `src/GameContext.tsx`: global game state + all socket event handlers + actions
+- `src/components/Landing.tsx`: create/join/public-room entry
+- `src/components/Lobby.tsx`: room/lobby controls
+- `src/components/GameScreen.tsx`: in-game layout
+- `src/components/DrawingCanvas.tsx`: canvas tools + drawing sync
+- `src/components/ChatPanel.tsx`: guesses/chat input and log
+
+## Functional Checklist Mapping
+
+### Must Have
+
+- Create room with configurable settings: Yes
+- Join room via link or code: Yes
+- Lobby with player list + host start: Yes
+- Turn-based rounds: Yes
+- Real-time drawing sync: Yes
+- Word selection (1-5 choices): Yes
+- Guessing with points: Yes
+- Scoring and leaderboard: Yes
+- Game end with winner: Yes
+- Basic drawing tools: Yes
+
+### Should Have
+
+- Hints: Yes
+- Chat: Yes
+- Countdown: Yes
+- Private rooms via invite link: Yes
+
+### Nice to Have
+
+- Word categories: No
+- Eraser: No
+- Kick/Ban: No
+- Votekick: No
+- Multiple languages: No
+
+## Submission Notes
+
+- Keep frontend and backend deployed at the same time.
+- If you update backend API routes, redeploy backend first, then frontend.
