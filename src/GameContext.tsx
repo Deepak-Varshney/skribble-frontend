@@ -1,7 +1,7 @@
 import {
   createContext,
   useContext,
-  useReducer,
+  useState,
   useEffect,
   useCallback,
   type ReactNode,
@@ -14,8 +14,6 @@ import type {
   RoundEndPayload,
   GameOverPayload,
 } from "./types";
-
-/* ── State shape ──────────────────────────────────── */
 
 interface GameState {
   screen: "landing" | "lobby" | "game" | "gameover";
@@ -31,7 +29,7 @@ interface GameState {
   timer: number;
 }
 
-const initial: GameState = {
+const initialState: GameState = {
   screen: "landing",
   playerId: "",
   roomId: "",
@@ -44,88 +42,6 @@ const initial: GameState = {
   error: "",
   timer: 0,
 };
-
-/* ── Actions ──────────────────────────────────────── */
-
-type Action =
-  | { type: "ROOM_CREATED"; roomId: string; playerId: string }
-  | { type: "JOINED_ROOM"; roomId: string; playerId: string }
-  | { type: "LOBBY_UPDATE"; snapshot: RoomSnapshot }
-  | { type: "GAME_STATE"; snapshot: RoomSnapshot }
-  | { type: "CHAT"; msg: ChatMsg }
-  | { type: "GUESS_RESULT"; result: GuessResult }
-  | { type: "WORD_OPTIONS"; options: string[] }
-  | { type: "DRAWER_WORD"; word: string }
-  | { type: "WORD_CHOSEN"; maskedWord: string; drawTime: number }
-  | { type: "HINT_UPDATE"; maskedWord: string }
-  | { type: "ROUND_START" }
-  | { type: "ROUND_END"; data: RoundEndPayload }
-  | { type: "GAME_OVER"; data: GameOverPayload }
-  | { type: "ERROR"; message: string }
-  | { type: "TICK" }
-  | { type: "GO_LANDING" };
-
-function reducer(state: GameState, action: Action): GameState {
-  switch (action.type) {
-    case "ROOM_CREATED":
-      return { ...state, roomId: action.roomId, playerId: action.playerId, screen: "lobby", error: "" };
-    case "JOINED_ROOM":
-      return { ...state, roomId: action.roomId, playerId: action.playerId, screen: "lobby", error: "" };
-    case "LOBBY_UPDATE":
-      return {
-        ...state,
-        snapshot: action.snapshot,
-        screen: action.snapshot.phase === "lobby" ? "lobby" : state.screen,
-      };
-    case "GAME_STATE": {
-      const s = action.snapshot;
-      const screen =
-        s.phase === "lobby" ? "lobby"
-        : s.phase === "game_over" ? "gameover"
-        : "game";
-      return { ...state, snapshot: s, screen };
-    }
-    case "CHAT":
-      return { ...state, chatLog: [...state.chatLog, action.msg] };
-    case "GUESS_RESULT":
-      return {
-        ...state,
-        chatLog: [
-          ...state.chatLog,
-          { system: true, text: `🎉 ${action.result.playerName} guessed it! (+${action.result.points})` },
-        ],
-      };
-    case "WORD_OPTIONS":
-      return { ...state, wordOptions: action.options, drawerWord: "" };
-    case "DRAWER_WORD":
-      return { ...state, drawerWord: action.word };
-    case "WORD_CHOSEN":
-      return {
-        ...state,
-        wordOptions: [],
-        timer: action.drawTime,
-        snapshot: state.snapshot ? { ...state.snapshot, maskedWord: action.maskedWord, phase: "drawing" } : state.snapshot,
-      };
-    case "HINT_UPDATE":
-      return { ...state, snapshot: state.snapshot ? { ...state.snapshot, maskedWord: action.maskedWord } : state.snapshot };
-    case "ROUND_START":
-      return { ...state, chatLog: [], roundEndData: null, drawerWord: "", screen: "game" };
-    case "ROUND_END":
-      return { ...state, roundEndData: action.data, chatLog: [...state.chatLog, { system: true, text: `Round over! The word was "${action.data.word}"` }] };
-    case "GAME_OVER":
-      return { ...state, gameOverData: action.data, screen: "gameover" };
-    case "ERROR":
-      return { ...state, error: action.message };
-    case "TICK":
-      return { ...state, timer: Math.max(0, state.timer - 1) };
-    case "GO_LANDING":
-      return { ...initial };
-    default:
-      return state;
-  }
-}
-
-/* ── Context ──────────────────────────────────────── */
 
 interface GameContextValue extends GameState {
   createRoom: (hostName: string, settings: Record<string, unknown>) => void;
@@ -146,67 +62,141 @@ export function useGame() {
   return useContext(GameContext);
 }
 
-/* ── Provider ─────────────────────────────────────── */
-
 export function GameProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(reducer, initial);
+  const [state, setState] = useState<GameState>(initialState);
   const socket = getSocket();
 
-  /* Socket listeners */
   useEffect(() => {
-    socket.on("room_created", (d: { roomId: string; playerId: string }) =>
-      dispatch({ type: "ROOM_CREATED", roomId: d.roomId, playerId: d.playerId }));
+    socket.on("room_created", (d: { roomId: string; playerId: string }) => {
+      setState((prev) => ({
+        ...prev,
+        roomId: d.roomId,
+        playerId: d.playerId,
+        screen: "lobby",
+        error: "",
+      }));
+    });
 
-    socket.on("joined_room", (d: { roomId: string; playerId: string }) =>
-      dispatch({ type: "JOINED_ROOM", roomId: d.roomId, playerId: d.playerId }));
+    socket.on("joined_room", (d: { roomId: string; playerId: string }) => {
+      setState((prev) => ({
+        ...prev,
+        roomId: d.roomId,
+        playerId: d.playerId,
+        screen: "lobby",
+        error: "",
+      }));
+    });
 
-    socket.on("lobby_update", (s: RoomSnapshot) =>
-      dispatch({ type: "LOBBY_UPDATE", snapshot: s }));
+    socket.on("lobby_update", (snapshot: RoomSnapshot) => {
+      setState((prev) => ({
+        ...prev,
+        snapshot,
+        screen: snapshot.phase === "lobby" ? "lobby" : prev.screen,
+      }));
+    });
 
-    socket.on("game_state", (s: RoomSnapshot) =>
-      dispatch({ type: "GAME_STATE", snapshot: s }));
+    socket.on("game_state", (snapshot: RoomSnapshot) => {
+      let screen: GameState["screen"] = "game";
+      if (snapshot.phase === "lobby") screen = "lobby";
+      if (snapshot.phase === "game_over") screen = "gameover";
 
-    socket.on("chat_message", (m: ChatMsg) =>
-      dispatch({ type: "CHAT", msg: m }));
+      setState((prev) => ({
+        ...prev,
+        snapshot,
+        screen,
+      }));
+    });
 
-    socket.on("guess_result", (r: GuessResult) =>
-      dispatch({ type: "GUESS_RESULT", result: r }));
+    socket.on("chat_message", (msg: ChatMsg) => {
+      setState((prev) => ({
+        ...prev,
+        chatLog: [...prev.chatLog, msg],
+      }));
+    });
 
-    socket.on("word_options", (d: { options: string[] }) =>
-      dispatch({ type: "WORD_OPTIONS", options: d.options }));
+    socket.on("guess_result", (result: GuessResult) => {
+      const systemMsg: ChatMsg = {
+        system: true,
+        text: `${result.playerName} guessed it! (+${result.points})`,
+      };
 
-    socket.on("drawer_word", (d: { word: string }) =>
-      dispatch({ type: "DRAWER_WORD", word: d.word }));
+      setState((prev) => ({
+        ...prev,
+        chatLog: [...prev.chatLog, systemMsg],
+      }));
+    });
 
-    socket.on("word_chosen", (d: { maskedWord: string; drawTime: number }) =>
-      dispatch({ type: "WORD_CHOSEN", maskedWord: d.maskedWord, drawTime: d.drawTime }));
+    socket.on("word_options", (d: { options: string[] }) => {
+      setState((prev) => ({
+        ...prev,
+        wordOptions: d.options,
+        drawerWord: "",
+      }));
+    });
 
-    socket.on("hint_update", (d: { maskedWord: string }) =>
-      dispatch({ type: "HINT_UPDATE", maskedWord: d.maskedWord }));
+    socket.on("drawer_word", (d: { word: string }) => {
+      setState((prev) => ({ ...prev, drawerWord: d.word }));
+    });
 
-    socket.on("round_start", () =>
-      dispatch({ type: "ROUND_START" }));
+    socket.on("word_chosen", (d: { maskedWord: string; drawTime: number }) => {
+      setState((prev) => ({
+        ...prev,
+        wordOptions: [],
+        timer: d.drawTime,
+        snapshot: prev.snapshot
+          ? { ...prev.snapshot, maskedWord: d.maskedWord, phase: "drawing" }
+          : prev.snapshot,
+      }));
+    });
 
-    socket.on("round_end", (d: RoundEndPayload) =>
-      dispatch({ type: "ROUND_END", data: d }));
+    socket.on("hint_update", (d: { maskedWord: string }) => {
+      setState((prev) => ({
+        ...prev,
+        snapshot: prev.snapshot ? { ...prev.snapshot, maskedWord: d.maskedWord } : prev.snapshot,
+      }));
+    });
 
-    socket.on("game_over", (d: GameOverPayload) =>
-      dispatch({ type: "GAME_OVER", data: d }));
+    socket.on("round_start", () => {
+      setState((prev) => ({
+        ...prev,
+        chatLog: [],
+        roundEndData: null,
+        drawerWord: "",
+        screen: "game",
+      }));
+    });
 
-    socket.on("error_msg", (d: { message: string }) =>
-      dispatch({ type: "ERROR", message: d.message }));
+    socket.on("round_end", (data: RoundEndPayload) => {
+      setState((prev) => ({
+        ...prev,
+        roundEndData: data,
+        chatLog: [...prev.chatLog, { system: true, text: `Round over! The word was "${data.word}"` }],
+      }));
+    });
+
+    socket.on("game_over", (data: GameOverPayload) => {
+      setState((prev) => ({
+        ...prev,
+        gameOverData: data,
+        screen: "gameover",
+      }));
+    });
+
+    socket.on("error_msg", (d: { message: string }) => {
+      setState((prev) => ({ ...prev, error: d.message }));
+    });
 
     return () => { socket.removeAllListeners(); };
   }, [socket]);
 
-  /* Timer tick */
   useEffect(() => {
     if (state.timer <= 0) return;
-    const id = setInterval(() => dispatch({ type: "TICK" }), 1000);
+    const id = setInterval(() => {
+      setState((prev) => ({ ...prev, timer: Math.max(0, prev.timer - 1) }));
+    }, 1000);
     return () => clearInterval(id);
   }, [state.timer]);
 
-  /* Actions */
   const createRoom = useCallback((hostName: string, settings: Record<string, unknown>) => {
     socket.emit("create_room", { hostName, settings });
   }, [socket]);
@@ -236,7 +226,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
   }, [socket, state.roomId]);
 
   const goLanding = useCallback(() => {
-    dispatch({ type: "GO_LANDING" });
+    setState(initialState);
   }, []);
 
   const isDrawer = state.snapshot?.drawerId === state.playerId;

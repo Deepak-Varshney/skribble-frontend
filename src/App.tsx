@@ -7,12 +7,14 @@ import GameOver from "./components/GameOver";
 export default function App() {
   const { screen } = useGame();
 
+  let content = <Landing />;
+  if (screen === "lobby") content = <Lobby />;
+  if (screen === "game") content = <GameScreen />;
+  if (screen === "gameover") content = <GameOver />;
+
   return (
     <div className="mx-auto max-w-7xl px-2 py-4">
-      {screen === "landing" && <Landing />}
-      {screen === "lobby" && <Lobby />}
-      {screen === "game" && <GameScreen />}
-      {screen === "gameover" && <GameOver />}
+      {content}
     </div>
   );
 }

@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, type FormEvent } from "react";
 import { useGame } from "../GameContext";
 
 export default function ChatPanel() {
-  const { chatLog, sendGuess, isDrawer, snapshot } = useGame();
+  const { chatLog, sendGuess, sendChat, isDrawer, snapshot } = useGame();
   const [text, setText] = useState("");
   const logRef = useRef<HTMLDivElement>(null);
 
@@ -14,7 +14,8 @@ export default function ChatPanel() {
     e.preventDefault();
     const trimmed = text.trim();
     if (!trimmed) return;
-    sendGuess(trimmed);
+    if (isGuessing) sendGuess(trimmed);
+    else sendChat(trimmed);
     setText("");
   };
 
